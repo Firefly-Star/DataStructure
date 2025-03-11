@@ -17,7 +17,8 @@ workspace "DataStructure"
         files
         {
             "DataStructure/Src/**.cpp",
-            "DataStructure/Src/**.h"
+            "DataStructure/Src/**.h",
+            "DataStructure/Src/**.tpp"
         }
 
         includedirs
@@ -26,15 +27,27 @@ workspace "DataStructure"
         }
 
         filter "configurations:Debug"
-        symbols "On"         
-        optimize "Off"       
+            symbols "On"         
+            optimize "Off"
+            defines
+            {
+                "FF_DEBUG"
+            }
 
         filter "configurations:Release"
             symbols "Off"
-            optimize "Full"        
+            optimize "Full"
+            defines
+            {
+                "FF_RELEASE"
+            }        
 
         filter "configurations: Release with Debug Information"
             symbols "On"
             optimize "On"
+            defines
+            {
+                "FF_RELEASE"
+            }
 
         filter {}
