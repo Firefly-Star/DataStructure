@@ -38,13 +38,9 @@ namespace my_stl
 	};
 
 	template<typename Allocator, typename T>
-	concept _Has_Allocator_Methods = requires(Allocator alloc, T const& value, T && other, size_t count, T* ptr)
+	concept _Has_Allocator_Methods = requires(Allocator alloc, T const& value, T && other, size_t count, T* ptr, std::initializer_list<T> list)
 	{
-		{ alloc.Allocate() } -> std::same_as<T*>;
 		{ alloc.Allocate(count) }->std::same_as<T*>;
-		{ alloc.Allocate(count, *&value) }->std::same_as<T*>;
-		{ alloc.Allocate(std::move(other)) } -> std::same_as<T*>;
-		{ alloc.Allocate(*&value) } -> std::same_as<T*>;
 		{ alloc.Deallocate(ptr, count) } -> std::same_as<void>;
 	};
 
@@ -52,107 +48,15 @@ namespace my_stl
 	class BasicAllocator
 	{
 	public:
-		NODISCARD T* Allocate()
-		{
-			RawAllocator rawAllocator;
-			T* ptr = (T*)rawAllocator.RawAllocate<alignof(T)>(sizeof(T));
-			try
-			{
-				new (ptr) T();
-			}
-			catch (...)
-			{
-				rawAllocator.RawDeallocate(ptr);
-				throw;
-			}
-			return ptr;
-		}
-		template<typename... Args>
-		NODISCARD T* Allocate(size_t count, Args&&... args)
+		NODISCARD T* Allocate(size_t count)
 		{
 			RawAllocator rawAllocator;
 			T* ptr = (T*)rawAllocator.RawAllocate<alignof(T)>(sizeof(T) * count);
-			size_t constructed = 0;
-			try
-			{
-				for (size_t i = 0; i < count; ++i)
-				{
-					new (ptr + i) T(std::forward<Args>(args)...);
-					++constructed;
-				}
-			}
-			catch (...)
-			{
-				for (size_t i = 0; i < constructed; ++i)
-				{
-					(ptr + i)->~T();
-				}
-				rawAllocator.RawDeallocate(ptr);
-				throw;
-			}
-			return ptr;
-		}
-		NODISCARD T* Allocate(size_t count, T const& value)
-		{
-			RawAllocator rawAllocator;
-			T* ptr = (T*)rawAllocator.RawAllocate<alignof(T)>(sizeof(T) * count);
-			size_t constructed = 0;
-			try
-			{
-				for (size_t i = 0; i < count; ++i)
-				{
-					new (ptr + i) T(value);
-					++constructed;
-				}
-			}
-			catch (...)
-			{
-				for (size_t i = 0; i < constructed; ++i)
-				{
-					(ptr + i)->~T();
-				}
-				rawAllocator.RawDeallocate(ptr);
-				throw;
-			}
-			return ptr;
-		}
-		NODISCARD T* Allocate(T&& other)
-		{
-			RawAllocator rawAllocator;
-			T* ptr = (T*)rawAllocator.RawAllocate<alignof(T)>(sizeof(T));
-			try
-			{
-				new (ptr) T(std::move(other));
-			}
-			catch (...)
-			{
-				rawAllocator.RawDeallocate(ptr);
-				throw;
-			}
-			return ptr;
-		}
-		NODISCARD T* Allocate(T const& other)
-		{
-			RawAllocator rawAllocator;
-			T* ptr = (T*)rawAllocator.RawAllocate<alignof(T)>(sizeof(T));
-			try
-			{
-				new (ptr) T(other);
-			}
-			catch (...)
-			{
-				rawAllocator.RawDeallocate(ptr);
-				throw;
-			}
 			return ptr;
 		}
 		void Deallocate(T* ptr, size_t count = 1)
 		{
 			RawAllocator rawAllocator;
-			for (size_t i = 0; i < count; ++i)
-			{
-				(ptr + i)->~T();
-			}
 			rawAllocator.RawDeallocate(ptr);
 		}
 	};

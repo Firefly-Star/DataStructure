@@ -154,13 +154,85 @@ namespace my_stl
 
 	public:
 		vector(Allocator const& alloc = Allocator())
-			:m_Allocator(alloc), m_Data(nullptr), m_Capability(0), m_Size(0) {}
+			:m_Allocator(alloc), m_Data(nullptr), m_Capability(0), m_Size(0) 
+		{}
 		vector(size_t count, Allocator const& alloc = Allocator())
-			:m_Allocator(alloc), m_Data(m_Allocator.Allocate(count)), m_Capability(count), m_Size(count) {}
+			:m_Allocator(alloc), m_Data(m_Allocator.Allocate(count)), m_Capability(count), m_Size(count) 
+		{
+			int constructed = 0;
+			try
+			{
+				for (; constructed < count; ++constructed)
+				{
+					new (m_Data + constructed) T();
+				}
+			}
+			catch (...)
+			{
+				for (int i = 0; i < constructed; ++i)
+				{
+					m_Data[i].~T();
+				}
+				m_Allocator.Deallocate(m_Data, count);
+				throw;
+			}
+		}
 		vector(size_t count, T const& value, Allocator const& alloc = Allocator())
-			:m_Allocator(alloc), m_Data(m_Allocator.Allocate(count, value)), m_Capability(count), m_Size(count)	{}
-		~vector(){ m_Allocator.Deallocate(m_Data, m_Capability); }
-		vector(vector const& other, Allocator const& alloc = Allocator()){}
+			:m_Allocator(alloc), m_Data(m_Allocator.Allocate(count)), m_Capability(count), m_Size(count)
+		{
+			int constructed = 0;
+			try
+			{
+				for (; constructed < count; ++constructed)
+				{
+					new (m_Data + constructed) T(value);
+				}
+			}
+			catch (...)
+			{
+				for (int i = 0; i < constructed; ++i)
+				{
+					m_Data[i].~T();
+				}
+				m_Allocator.Deallocate(m_Data, count);
+				throw;
+			}
+		}
+		vector(std::initializer_list<T> list, Allocator const& alloc = Allocator())
+			:m_Allocator(alloc), m_Data(m_Allocator.Allocate(list.size())), m_Capability(list.size()), m_Size(list.size()) 
+		{
+			int constructed = 0;
+			try
+			{
+				for (; constructed < count; ++constructed)
+				{
+					new (m_Data + constructed) T(list[constructed]);
+				}
+			}
+			catch (...)
+			{
+				for (int i = 0; i < constructed; ++i)
+				{
+					m_Data[i].~T();
+				}
+				m_Allocator.Deallocate(m_Data, count);
+				throw;
+			}
+		}
+		
+		~vector() 
+		{ 
+			for (int i = 0; i < m_Size; ++i)
+			{
+				m_Data[i].~T();
+			}
+			m_Allocator.Deallocate(m_Data, m_Capability); 
+		}
+		
+		vector(vector const& other, Allocator const& alloc = Allocator())
+			:m_Allocator(alloc), m_Data(nullptr), m_Capability(0), m_Size(0) { copy_from(other); }
+		vector(vector&& other, Allocator const& alloc = Allocator())
+			:m_Allocator(alloc), m_Data(nullptr), m_Capability(0), m_Size(0) { swap(other); }
 
 		iterator begin() { return iterator(m_Data); }
 		iterator end() { return iterator(m_Data + m_Size); }
@@ -171,7 +243,6 @@ namespace my_stl
 		const_reverse_iterator crbegin() { return const_reverse_iterator(m_Data + m_Size - 1); }
 		const_reverse_iterator crend() { return const_reverse_iterator(m_Data - 1); }
 
-
 	private:
 		Allocator m_Allocator;
 		T* m_Data;
@@ -180,7 +251,25 @@ namespace my_stl
 	private:
 		void copy_from(vector const& other)
 		{
+			int constructed = 0;
+			try
+			{
+				for (; constructed < count; ++constructed)
+				{
+					new (m_Data + constructed) T(other.m_Data[constructed]);
+				}
+			}
+			catch (...)
+			{
+				for (int i = 0; i < constructed; ++i)
+				{
+					m_Data[i].~T();
+				}
+				m_Allocator.Deallocate(m_Data, count);
+				throw;
+			}
 		}
+
 		void swap(vector& other)
 		{
 
