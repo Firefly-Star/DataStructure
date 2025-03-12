@@ -37,27 +37,132 @@ namespace my_stl
 		}
 	};
 
-	template<typename Allocator, typename T>
-	concept _Has_Allocator_Methods = requires(Allocator alloc, T const& value, T && other, size_t count, T* ptr, std::initializer_list<T> list)
-	{
-		{ alloc.Allocate(count) }->std::same_as<T*>;
-		{ alloc.Deallocate(ptr, count) } -> std::same_as<void>;
-	};
-
 	template<typename T>
 	class BasicAllocator
 	{
 	public:
-		NODISCARD T* Allocate(size_t count)
+		using value_type = T;
+		using pointer = T*;
+		using const_pointer = const T*;
+		using size_type = size_t;
+
+	public:
+		NODISCARD pointer allocate(size_type count)
 		{
 			RawAllocator rawAllocator;
-			T* ptr = (T*)rawAllocator.RawAllocate<alignof(T)>(sizeof(T) * count);
+			pointer ptr = (pointer)rawAllocator.RawAllocate<alignof(value_type)>(sizeof(value_type) * count);
 			return ptr;
 		}
-		void Deallocate(T* ptr, size_t count = 1)
+		void deallocate(pointer ptr, size_type count = 1)
 		{
 			RawAllocator rawAllocator;
 			rawAllocator.RawDeallocate(ptr);
+		}
+	};
+
+	template<typename Allocator>
+	class allocator_traits
+	{
+	public:
+		using value_type = typename decltype([]() {
+			if constexpr (requires { typename Allocator::value_type; })
+			{
+				return std::type_identity<typename Allocator::value_type>{};
+			}
+			else
+			{
+				return std::type_identity<char>{};
+			}
+			}())::type;
+		using pointer = typename decltype([]() {
+			if constexpr (requires { typename Allocator::pointer; })
+			{
+				return std::type_identity<typename Allocator::pointer>{};
+			}
+			else
+			{
+				return std::type_identity<value_type*>{};
+			}
+			}())::type;
+		using const_pointer = typename decltype([]() {
+			if constexpr (requires { typename Allocator::const_pointer; })
+			{
+				return std::type_identity<typename Allocator::const_pointer>{};
+			}
+			else
+			{
+				return std::type_identity<const value_type*>{};
+			}
+			}())::type;
+		using size_type = typename decltype([]() {
+			if constexpr (requires { typename Allocator::size_type; })
+			{
+				return std::type_identity<typename Allocator::size_type>{};
+			}
+			else
+			{
+				return std::type_identity<size_t>{};
+			}
+			}())::type;
+		
+	public:
+		static pointer allocate(Allocator& alloc, size_type count)
+		{
+			if constexpr (requires { {alloc.allocate(count)} -> std::same_as<pointer>; })
+			{
+				return alloc.allocate(count);
+			}
+			else
+			{
+				RawAllocator rawAllocator;
+				return rawAllocator.RawAllocate(count * sizeof(value_type));
+			}
+		}
+		static void deallocate(Allocator& alloc, pointer ptr, size_type count = 1)
+		{
+			if constexpr (requires { {alloc.deallocate(ptr, count)} -> std::same_as<void>; })
+			{
+				alloc.deallocate(ptr, count);
+			}
+			else
+			{
+				RawAllocator rawAllocator;
+				rawAllocator.RawDeallocate(ptr);
+			}
+		}
+		static size_type max_size(Allocator const& alloc) noexcept
+		{
+			if constexpr (requires { {alloc.max_size()} -> std::same_as<size_type>; })
+			{
+				return alloc.max_size();
+			}
+			else
+			{
+				return std::numeric_limits<size_type>::max() / sizeof(value_type);
+			}
+		}
+		template<typename... Args>
+		static void construct(Allocator& alloc, pointer ptr, Args&&... args)
+		{
+			if constexpr (requires { alloc.construct(ptr, std::forward<Args>(args)...); })
+			{
+				alloc.construct(ptr, std::forward<Args>(args)...);
+			}
+			else
+			{
+				new(ptr) value_type(std::forward<Args>(args)...);
+			}
+		}
+		static void destroy(Allocator& alloc, pointer ptr)
+		{
+			if constexpr (requires { alloc.destroy(ptr); })
+			{
+				alloc.destroy(ptr);
+			}
+			else
+			{
+				ptr->~value_type();
+			}
 		}
 	};
 }
