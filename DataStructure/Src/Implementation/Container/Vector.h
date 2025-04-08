@@ -16,12 +16,12 @@ namespace my_stl
 		using size_type = size_t;
 		using difference_type = std::ptrdiff_t;
 		using reference = value_type&;
+		using rvalue_reference = value_type&&;
 		using const_reference = const value_type&;
 		using pointer = allocator_traits<Allocator>::pointer;
 		using const_pointer = allocator_traits<Allocator>::const_pointer;
-
 	public:
-		// TODO: 在调试配置下进行越界判断
+		// TODO: Debug模式下的边界检查和迭代器有效性检查
 		class iterator : public random_access_iterator_t<iterator>
 		{
 		public:
@@ -53,22 +53,20 @@ namespace my_stl
 			friend bool operator<=(iterator const& lhs, iterator const& rhs) { return lhs.m_Current <= rhs.m_Current; }
 			friend bool operator>(iterator const& lhs, iterator const& rhs) { return lhs.m_Current > rhs.m_Current; }
 			friend bool operator>=(iterator const& lhs, iterator const& rhs) { return lhs.m_Current >= rhs.m_Current; }
-		private:
+		protected:
 			pointer m_Current;
 		};
 
-		class const_iterator : public random_access_iterator_t<const_iterator>
+		class const_iterator : public iterator
 		{
 		public:
 			using value_type = T;
 			using pointer = T*;
 			using reference = T&;
 			using difference_type = std::ptrdiff_t;
+
+			using iterator::iterator;
 		public:
-			const_iterator(pointer ptr) :m_Current(ptr) {}
-
-			const_iterator(const_iterator const& other) :m_Current(other.m_Current) {}
-
 			reference operator*() { return *m_Current; }
 			const_iterator& operator++() { ++m_Current; return *this; }
 			const_iterator& operator--() { --m_Current; return *this; }
@@ -88,8 +86,6 @@ namespace my_stl
 			friend bool operator<=(const_iterator const& lhs, const_iterator const& rhs) { return lhs.m_Current <= rhs.m_Current; }
 			friend bool operator>(const_iterator const& lhs, const_iterator const& rhs) { return lhs.m_Current > rhs.m_Current; }
 			friend bool operator>=(const_iterator const& lhs, const_iterator const& rhs) { return lhs.m_Current >= rhs.m_Current; }
-		private:
-			pointer m_Current;
 		};
 
 		class reverse_iterator : public random_access_iterator_t<reverse_iterator>
@@ -123,22 +119,20 @@ namespace my_stl
 			friend bool operator<=(reverse_iterator const& lhs, reverse_iterator const& rhs) { return lhs.m_Current >= rhs.m_Current; }
 			friend bool operator>(reverse_iterator const& lhs, reverse_iterator const& rhs) { return lhs.m_Current < rhs.m_Current; }
 			friend bool operator>=(reverse_iterator const& lhs, reverse_iterator const& rhs) { return lhs.m_Current <= rhs.m_Current; }
-		private:
+		protected:
 			pointer m_Current;
 		};
 
-		class const_reverse_iterator : public random_access_iterator_t<const_reverse_iterator>
+		class const_reverse_iterator : public reverse_iterator
 		{
 		public:
 			using value_type = T;
 			using pointer = T*;
 			using reference = T&;
 			using difference_type = std::ptrdiff_t;
+
+			using reverse_iterator::reverse_iterator;
 		public:
-			const_reverse_iterator(pointer ptr) :m_Current(ptr) {}
-
-			const_reverse_iterator(const_reverse_iterator const& other) :m_Current(other.m_Current) {}
-
 			reference operator*() { return *m_Current; }
 			const_reverse_iterator& operator++() { --m_Current; return *this; }
 			const_reverse_iterator& operator--() { ++m_Current; return *this; }
@@ -158,8 +152,6 @@ namespace my_stl
 			friend bool operator<=(const_reverse_iterator const& lhs, const_reverse_iterator const& rhs) { return lhs.m_Current >= rhs.m_Current; }
 			friend bool operator>(const_reverse_iterator const& lhs, const_reverse_iterator const& rhs) { return lhs.m_Current < rhs.m_Current; }
 			friend bool operator>=(const_reverse_iterator const& lhs, const_reverse_iterator const& rhs) { return lhs.m_Current <= rhs.m_Current; }
-		private:
-			pointer m_Current;
 		};
 
 	public:
@@ -248,14 +240,18 @@ namespace my_stl
 		vector& operator=(vector && other) noexcept { swap(other); return *this; }
 
 	public:
-		iterator begin() { return iterator(m_Data); }
-		iterator end() { return iterator(m_Data + m_Size); }
-		const_iterator cbegin() { return const_iterator(m_Data); }
-		const_iterator cend() { return const_iterator(m_Data + m_Size); }
-		reverse_iterator rbegin() { return reverse_iterator(m_Data + m_Size - 1); }
-		reverse_iterator rend() { return reverse_iterator(m_Data - 1); }
-		const_reverse_iterator crbegin() { return const_reverse_iterator(m_Data + m_Size - 1); }
-		const_reverse_iterator crend() { return const_reverse_iterator(m_Data - 1); }
+		iterator begin() noexcept { return iterator(m_Data); }
+		const_iterator begin() const noexcept { return const_iterator(m_Data); }
+		iterator end() noexcept { return iterator(m_Data + m_Size); }
+		const_iterator end() const noexcept { return const_iterator(m_Data + m_Size); }
+		const_iterator cbegin() const noexcept { return begin(); }
+		const_iterator cend() const noexcept { return end(); }
+		reverse_iterator rbegin() noexcept { return reverse_iterator(m_Data + m_Size - 1); }
+		const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(m_Data + m_Size - 1); }
+		reverse_iterator rend() noexcept { return reverse_iterator(m_Data - 1); }
+		const_reverse_iterator rend() const noexcept { return const_reverse_iterator(m_Data - 1); }
+		const_reverse_iterator crbegin() noexcept { return rbegin(); }
+		const_reverse_iterator crend() const noexcept { return rend(); }
 
 	public:
 		NODISCARD reference operator[](size_type n) noexcept { return m_Data[n]; }
@@ -273,14 +269,313 @@ namespace my_stl
 		NODISCARD const_pointer data() const noexcept { return m_Data; }
 
 		NODISCARD size_type size() const noexcept { return m_Size; }
-		NODISCARD size_type max_size() const noexcept { return std::numeric_limits<size_type>::max() / sizeof(value_type); }
+		NODISCARD size_type max_size() const noexcept 
+		{
+			return std::min(std::numeric_limits<size_type>::max(), allocator_traits<allocator_type>::max_size(m_Allocator));
+		}
 		NODISCARD size_type capacity() const noexcept { return m_Capacity; }
 
+		void reserve(size_type new_cap)
+		{
+			if (new_cap <= m_Capacity) return;
+			pointer new_data = allocator_traits<allocator_type>::allocate(m_Allocator, new_cap);
+			size_type constructed = 0;
+			try
+			{
+				for (; constructed < m_Size; ++constructed)
+				{
+					allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, std::move(m_Data[constructed]));
+				}
+			}
+			catch (...)
+			{
+				for (size_type i = 0; i < constructed; ++i)
+				{
+					allocator_traits<allocator_type>::destroy(m_Allocator, new_data + i);
+				}
+				allocator_traits<allocator_type>::deallocate(m_Allocator, new_data, new_cap);
+				throw;
+			}
+			for (size_type i = 0; i < m_Size; ++i)
+			{
+				allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + i);
+			}
+			allocator_traits<allocator_type>::deallocate(m_Allocator, m_Data, m_Capacity);
+			m_Data = new_data;
+			m_Capacity = new_cap;
+		}
+		void shrink_to_fit()
+		{
+			if (m_Size == m_Capacity) return;
+			pointer new_data = allocator_traits<allocator_type>::allocate(m_Allocator, m_Size);
+			size_type constructed = 0;
+			try
+			{
+				for (; constructed < m_Size; ++constructed)
+				{
+					allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, std::move(m_Data[constructed]));
+				}
+			}
+			catch (...)
+			{
+				for (size_type i = 0; i < constructed; ++i)
+				{
+					allocator_traits<allocator_type>::destroy(m_Allocator, new_data + i);
+				}
+				allocator_traits<allocator_type>::deallocate(m_Allocator, new_data, m_Size);
+				throw;
+			}
+			for (size_type i = 0; i < m_Size; ++i)
+			{
+				allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + i);
+			}
+			allocator_traits<allocator_type>::deallocate(m_Allocator, m_Data, m_Capacity);
+			m_Data = new_data;
+			m_Capacity = m_Size;
+		}
+
+		void resize(size_type count)
+		{
+			if (count < m_Size)
+			{
+				for (size_type i = count; i < m_Size; ++i)
+				{
+					allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + i);
+				}
+				m_Size = count;
+			}
+			else if (count > m_Size)
+			{
+				if (count > m_Capacity)
+				{
+					reserve(count);
+				}
+				for (size_type i = m_Size; i < count; ++i)
+				{
+					allocator_traits<allocator_type>::construct(m_Allocator, m_Data + i);
+				}
+				m_Size = count;
+			}
+		}
+		void resize(size_type count, const_reference value)
+		{
+			if (count < m_Size)
+			{
+				for (size_type i = count; i < m_Size; ++i)
+				{
+					allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + i);
+				}
+				m_Size = count;
+			}
+			else if (count > m_Size)
+			{
+				if (count > m_Capacity)
+				{
+					reserve(count);
+				}
+				for (size_type i = m_Size; i < count; ++i)
+				{
+					allocator_traits<allocator_type>::construct(m_Allocator, m_Data + i, value);
+				}
+				m_Size = count;
+			}
+		}
+
+		template<typename... Args>
+		iterator emplace(const_iterator pos, Args&&... args)
+		{
+			difference_type index = pos - cbegin();
+			if (index < 0 || index > m_Size) throw std::out_of_range("Iterator out of range.");
+			if (m_Size == m_Capacity)
+			{
+				size_type new_capacity = m_Capacity == 0 ? 1 : m_Capacity * 2;
+				pointer new_data = allocator_traits<allocator_type>::allocate(m_Allocator, new_capacity);
+				size_type constructed = 0;
+				try
+				{
+					for (; constructed < index; ++constructed)
+					{
+						allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, std::move(m_Data[constructed]));
+					}
+					allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, std::forward<Args>(args)...);
+					++constructed;
+					for (; constructed < m_Size; ++constructed)
+					{
+						allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, std::move(m_Data[constructed - 1]));
+					}
+				}
+				catch (...)
+				{
+					for (size_type i = 0; i < constructed; ++i)
+					{
+						allocator_traits<allocator_type>::destroy(m_Allocator, new_data + i);
+					}
+					allocator_traits<allocator_type>::deallocate(m_Allocator, new_data, new_capacity);
+					throw;
+				}
+				for (size_type i = 0; i < m_Size; ++i)
+				{
+					allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + i);
+				}
+				allocator_traits<allocator_type>::deallocate(m_Allocator, m_Data, m_Capacity);
+				m_Data = new_data;
+				m_Capacity = new_capacity;
+				++m_Size;
+			}
+			else
+			{
+				for (size_type i = m_Size; i > index; --i)
+				{
+					allocator_traits<allocator_type>::construct(m_Allocator, m_Data + i, std::move(m_Data[i - 1]));
+					allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + (i - 1));
+				}
+				allocator_traits<allocator_type>::construct(m_Allocator, m_Data + index, std::forward<Args>(args)...);
+				++m_Size;
+			}
+			return iterator(m_Data + index);
+		}
+
+		iterator insert(const_iterator pos, const_reference value)
+		{
+			return emplace(pos, value);
+		}
+		iterator insert(const_iterator pos, rvalue_reference value)
+		{
+			return emplace(pos, std::move(value));
+		}
+		iterator insert(const_iterator pos, size_type count, const_reference value)
+		{
+			difference_type index = pos - cbegin();
+			if (index < 0 || index > m_Size) throw std::out_of_range("Iterator out of range.");
+			if (m_Size + count > m_Capacity)
+			{
+				size_type new_capacity = m_Capacity == 0 ? 1 : m_Capacity * 2;
+				pointer new_data = allocator_traits<allocator_type>::allocate(m_Allocator, new_capacity);
+				size_type constructed = 0;
+				try
+				{
+					for (; constructed < index; ++constructed)
+					{
+						allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, std::move(m_Data[constructed]));
+					}
+					for (size_type i = 0; i < count; ++i)
+					{
+						allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, value);
+						++constructed;
+					}
+					for (; constructed < m_Size + count; ++constructed)
+					{
+						allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, std::move(m_Data[constructed - count]));
+					}
+				}
+				catch (...)
+				{
+					for (size_type i = 0; i < constructed; ++i)
+					{
+						allocator_traits<allocator_type>::destroy(m_Allocator, new_data + i);
+					}
+					allocator_traits<allocator_type>::deallocate(m_Allocator, new_data, new_capacity);
+					throw;
+				}
+				for (size_type i = 0; i < m_Size; ++i)
+				{
+					allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + i);
+				}
+				allocator_traits<allocator_type>::deallocate(m_Allocator, m_Data, m_Capacity);
+				m_Data = new_data;
+				m_Capacity = new_capacity;
+				m_Size += count;
+			}
+			else
+			{
+				for (size_type i = m_Size + count - 1; i > index + count - 1; --i)
+				{
+					allocator_traits<allocator_type>::construct(m_Allocator, m_Data + i, std::move(m_Data[i - count]));
+					allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + (i - count));
+				}
+				for (size_type i = 0; i < count; ++i)
+				{
+					allocator_traits<allocator_type>::construct(m_Allocator, m_Data + index + i, value);
+				}
+				m_Size += count;
+			}
+			return iterator(m_Data + index);
+		}
+		template<typename InputIt>
+		iterator insert(const_iterator pos, InputIt first, InputIt last)
+		{
+			difference_type index = pos - cbegin();
+			if (index < 0 || index > m_Size) throw std::out_of_range("Iterator out of range.");
+			size_type count = last - first; // TODO: distance
+			if (m_Size + count > m_Capacity)
+			{
+				size_type new_capacity = m_Capacity == 0 ? 1 : m_Capacity * 2;
+				pointer new_data = allocator_traits<allocator_type>::allocate(m_Allocator, new_capacity);
+				size_type constructed = 0;
+				try
+				{
+					for (; constructed < index; ++constructed)
+					{
+						allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, std::move(m_Data[constructed]));
+					}
+					for (InputIt it = first; it != last; ++it)
+					{
+						allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, *it);
+						++constructed;
+					}
+					for (; constructed < m_Size + count; ++constructed)
+					{
+						allocator_traits<allocator_type>::construct(m_Allocator, new_data + constructed, std::move(m_Data[constructed - count]));
+					}
+				}
+				catch (...)
+				{
+					for (size_type i = 0; i < constructed; ++i)
+					{
+						allocator_traits<allocator_type>::destroy(m_Allocator, new_data + i);
+					}
+					allocator_traits<allocator_type>::deallocate(m_Allocator, new_data, new_capacity);
+					throw;
+				}
+				for (size_type i = 0; i < m_Size; ++i)
+				{
+					allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + i);
+				}
+				allocator_traits<allocator_type>::deallocate(m_Allocator, m_Data, m_Capacity);
+				m_Data = new_data;
+				m_Capacity = new_capacity;
+				m_Size += count;
+			}
+			else
+			{
+				for (size_type i = m_Size + count - 1; i > index + count - 1; --i)
+				{
+					allocator_traits<allocator_type>::construct(m_Allocator, m_Data + i, std::move(m_Data[i - count]));
+					allocator_traits<allocator_type>::destroy(m_Allocator, m_Data + (i - count));
+				}
+				size_type i = index;
+				InputIt it = first;
+				for (; it != last; ++it, ++i)
+				{
+					allocator_traits<allocator_type>::construct(m_Allocator, m_Data + i, *it);
+				}
+			}
+			return iterator(m_Data + index);
+		}
+
+		void swap(vector& other)
+		{
+			std::swap(m_Allocator, other.m_Allocator);
+			std::swap(m_Data, other.m_Data);
+			std::swap(m_Capacity, other.m_Capacity);
+			std::swap(m_Size, other.m_Size);
+		}
+		NODISCARD constexpr allocator_type get_allocator() const { return m_Allocator; }
 	private:
 		allocator_type m_Allocator;
 		pointer m_Data;
 		size_type m_Capacity, m_Size;
-
+		
 	private:
 		void copy_from(vector const& other)
 		{
@@ -306,12 +601,5 @@ namespace my_stl
 			}
 		}
 
-		void swap(vector& other)
-		{
-			std::swap(m_Allocator, other.m_Allocator);
-			std::swap(m_Data, other.m_Data);
-			std::swap(m_Capacity, other.m_Capacity);
-			std::swap(m_Size, other.m_Size);
-		}
 	};
 }

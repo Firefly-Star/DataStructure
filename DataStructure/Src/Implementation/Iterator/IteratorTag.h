@@ -148,4 +148,111 @@ namespace my_stl
 				"Input iterator must has specified aliases and methods!");
 		}
 	};
+
+	template<typename Iter>
+	constexpr bool is_input_iterator = std::derived_from<Iter, input_iterator_t<Iter>>;
+
+	template<typename Iter>
+	constexpr bool is_output_iterator = std::derived_from<Iter, output_iterator_t<Iter>>;
+
+	template<typename Iter>
+	constexpr bool is_bidirectional_iterator = std::derived_from<Iter, bidirectional_iterator_t<Iter>>;
+
+	template<typename Iter>
+	constexpr bool is_random_access_iterator = std::derived_from<Iter, random_access_iterator_t<Iter>>;
+
+	template<typename Iter>
+	class iterator_traits
+	{
+	public:
+		using value_type = typename decltype([]()
+			{
+				if constexpr (_Has_iterator_aliases<Iter>)
+				{
+					return std::type_identity<typename Iter::value_type>{};
+				}
+				else
+				{
+					return std::type_identity<char>{};
+				}
+			}())::type;
+		using pointer = typename decltype([]()
+			{
+				if constexpr (_Has_iterator_aliases<Iter>)
+				{
+					return std::type_identity<typename Iter::pointer>{};
+				}
+				else
+				{
+					return std::type_identity<value_type*>{};
+				}
+			}())::type;
+		using reference = typename decltype([]()
+			{
+				if constexpr (_Has_iterator_aliases<Iter>)
+				{
+					return std::type_identity<typename Iter::reference>{};
+				}
+				else
+				{
+					return std::type_identity<value_type&>{};
+				}
+			}())::type;
+		using difference_type = typename decltype([]()
+			{
+				if constexpr (_Has_iterator_aliases<Iter>)
+				{
+					return std::type_identity<typename Iter::difference_type>{};
+				}
+				else
+				{
+					return std::type_identity<std::ptrdiff_t>{};
+				}
+			}())::type;
+		using iterator_category = typename decltype([]()
+			{
+				if constexpr (is_input_iterator<Iter>)
+				{
+					return std::type_identity<input_iterator_tag>{};
+				}
+				else if constexpr (is_output_iterator<Iter>)
+				{
+					return std::type_identity<output_iterator_tag>{};
+				}
+				else if constexpr (is_bidirectional_iterator<Iter>)
+				{
+					return std::type_identity<bidirectional_iterator_tag>{};
+				}
+				else if constexpr (is_random_access_iterator<Iter>)
+				{
+					return std::type_identity<random_access_iterator_tag>{};
+				}
+				else
+				{
+					return std::type_identity<void>{};
+				}
+			}())::type;
+	};
+
+
+	template<typename Iter>
+	NODISCARD constexpr typename Iter::difference_type distance(Iter first, Iter last)
+	{
+		if constexpr (is_random_access_iterator<Iter>)
+		{
+			return last - first;
+		}
+		else
+		{
+			typename Iter::difference_type n = 0;
+			while (first != last)
+			{
+				++first;
+				++n;
+			}
+			return n;
+		}
+	}
+
+
 }
