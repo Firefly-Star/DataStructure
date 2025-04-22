@@ -5,6 +5,7 @@
 #include <stack>
 #include <iostream>
 #include <functional>
+#include "Tool/Compare.h"
 
 namespace my_stl
 {
@@ -550,7 +551,7 @@ namespace my_stl
         {
             _erase(root, std::forward<U>(ele));
         }
-        const pointer const data() const
+        const pointer data() const
         {
             return root;
         }
@@ -690,6 +691,110 @@ namespace my_stl
                 clear(node->right);
                 delete node;
             }
+        }
+    };
+
+    template<typename T>
+    struct add
+    {
+        T operator()(T const& left, T const& right)
+        {
+            return left + right;
+        }
+        T identity()
+        {
+            return static_cast<T>(0);
+        }
+    };
+
+    template<typename T>
+    struct min
+    {
+        T operator()(T const& left, T const& right)
+        {
+            return std::min(left, right);
+        }
+        T identity()
+        {
+            return std::numeric_limits<T>::max();
+        }
+    };
+
+    template<typename T>
+    struct max
+    {
+        T operator()(T const& left, T const& right)
+        {
+            return std::max(left, right);
+        }
+        T identity()
+        {
+            return std::numeric_limits<T>::min();
+        }
+    };
+
+    template<typename T>
+    struct multiply
+    {
+        T operator()(T const& left, T const& right)
+        {
+            return left * right;
+        }
+        T identity()
+        {
+            return static_cast<T>(1);
+        }
+    };
+
+    template<typename T, class AggregateFunc = add<T>>
+    class SegmentTree
+    {
+    public:
+        struct SegmentNode
+        {
+            size_t lower;
+            size_t upper;
+            T val;
+        };
+        template<typename ARR>
+        SegmentTree(ARR&& arr, AggregateFunc agg = AggregateFunc())
+            :data(4 * arr.size()), agg(agg)
+        {
+            build(data, 0, std::forward<ARR>(arr), 0, arr.size() - 1);
+        }
+        T query(size_t L, size_t R)
+        {
+            if (L > R)
+                return agg.identity();
+            return query_impl(L, R, 0);
+        }
+    private:
+        std::vector<SegmentNode> data;
+        AggregateFunc agg;
+    private:
+        template<typename ARR>
+        void build(std::vector<SegmentNode>& data, size_t index, ARR&& arr, size_t L, size_t R)
+        {
+            if (L == R)
+            {
+                data[index] = { L, L, arr[L] };
+            }
+            else
+            {
+                size_t mid = (L + R) / 2;
+                build(data, 2 * index + 1, std::forward<ARR>(arr), L, mid);
+                build(data, 2 * index + 2, std::forward<ARR>(arr), mid + 1, R);
+                data[index] = { L, R, agg(data[2 * index + 1].val, data[2 * index + 2].val) };
+            }
+        }
+
+        T query_impl(size_t L, size_t R, size_t index)
+        {
+            if (data[index].lower > R || data[index].upper < L)
+                return agg.identity();
+            if (data[index].lower >= L && data[index].upper <= R)
+                return data[index].val;
+            return agg(query_impl(L, R, 2 * index + 1), query_impl(L, R, 2 * index + 2));
         }
     };
 }
