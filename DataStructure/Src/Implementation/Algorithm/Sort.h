@@ -1,6 +1,8 @@
 #pragma once
 #include "Tool/Compare.h"
+#include "Heap.h"
 #include <omp.h>
+#include <thread>
 #include <vector>
 
 namespace my_stl
@@ -8,15 +10,22 @@ namespace my_stl
 	template<typename RanIt, class Comp = less<typename RanIt::value_type>>
 	void bubble_sort(RanIt first, RanIt last, Comp comp = Comp())
 	{
+		if (first == last) 
+			return;
+
 		for (RanIt i = first; i != last; ++i)
 		{
-			for (RanIt j = i + 1; j != last; ++j)
+			bool is_ranked = true;
+			for (RanIt j = last - 1; j >= i + 1; --j)
 			{
-				if (comp(*j, *i))
+				if (comp(*j, *(j - 1)))
 				{
-					std::swap(*i, *j);
+					std::swap(*j, *(j - 1));
+					is_ranked = false;
 				}
 			}
+			if (is_ranked)
+				return;
 		}
 	}
 
@@ -158,5 +167,15 @@ namespace my_stl
 		std::swap(*i, *pivot);
 		quick_sort(first, i);
 		quick_sort(i + 1, last);
+	}
+
+	template<typename RanIt, class Comp = less<typename RanIt::value_type>>
+	void heap_sort(RanIt first, RanIt last, Comp comp = Comp())
+	{
+		my_stl::make_heap(first, last, comp);
+		for (; last > first; --last)
+		{
+			my_stl::pop_heap(first, last, comp);
+		}
 	}
 }

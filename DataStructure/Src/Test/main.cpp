@@ -16,11 +16,12 @@
 #include <chrono>
 #include <future>
 #include "Implementation/Algorithm/Sort.h"
-using namespace std;
+#include "Implementation/Algorithm/Heap.h"
+using namespace std::chrono;
 
-std::vector<int> generate(size_t number, size_t k)
+std::vector<size_t> generate(size_t number, size_t k)
 {
-    std::vector<int> vec;
+    std::vector<size_t> vec;
     for (size_t i = 1; i <= number; ++i) {
         vec.push_back(i);
     }
@@ -50,8 +51,23 @@ bool check(UnidIt first, UnidIt last, Pred pred = Pred())
     }
     return all_valid;
 }
-
 static std::mutex mtx_cout;
+
+template<typename Container, class Pred = my_stl::less<typename Container::value_type>>
+void check_and_print(Container const& c, std::string_view sv, Pred pred = Pred())
+{
+    if (check(c.begin(), c.end(), pred))
+    {
+        std::unique_lock<std::mutex> lk(mtx_cout);
+        std::cout << sv << " sorted\n";
+    }
+    else
+    {
+        std::unique_lock<std::mutex> lk(mtx_cout);
+        std::cout << sv << " unsorted\n";
+    }
+}
+
 template<typename Func>
 void measure(Func&& func, std::string_view s = "", std::chrono::milliseconds timeout = 3000ms)
 {
@@ -108,11 +124,10 @@ void measure(Func&& func, std::string_view s = "", std::chrono::milliseconds tim
 
 int main()
 {
-
-    size_t number = 1e6;
-    size_t k = 1e3;
-    auto timeout = 10000ms;
-    
+#if 1
+    size_t number = 1e4;
+    size_t k = 1e4;
+    auto timeout = 100000ms;
     auto v = generate(number, k);
     auto v_for_bubble_sort(v);
     auto v_for_selection_sort(v);
@@ -120,13 +135,14 @@ int main()
     auto v_for_merge_sort(v);
     auto v_for_inplace_merge_sort(v);
     auto v_for_quick_sort(v);
+    auto v_for_heap_sort(v);
     auto v_for_stl_sort(v);
 
     std::thread bubble_sort([&]() {
         measure([&]() { my_stl::bubble_sort(v_for_bubble_sort.begin(), v_for_bubble_sort.end()); }, "bubble sort", timeout);
         });
     std::thread selection_sort([&]() {
-        measure([&]() { my_stl::selection_sort(v_for_bubble_sort.begin(), v_for_bubble_sort.end()); }, "selection sort", timeout);
+        measure([&]() { my_stl::selection_sort(v_for_selection_sort.begin(), v_for_selection_sort.end()); }, "selection sort", timeout);
         });
     std::thread insertion_sort([&]() {
         measure([&]() { my_stl::insertion_sort(v_for_insertion_sort.begin(), v_for_insertion_sort.end()); }, "insertion sort", timeout);
@@ -140,26 +156,23 @@ int main()
     std::thread quick_sort([&]() {
         measure([&]() { my_stl::quick_sort(v_for_quick_sort.begin(), v_for_quick_sort.end()); }, "quick sort", timeout);
         });
+    std::thread heap_sort([&]() {
+        measure([&]() { my_stl::heap_sort(v_for_heap_sort.begin(), v_for_heap_sort.end()); }, "heap sort", timeout);
+        });
     std::thread stl_sort([&]() {
         measure([&]() { std::sort(v_for_stl_sort.begin(), v_for_stl_sort.end()); }, "stl sort", timeout);
         });
 
+    stl_sort.join();
+    quick_sort.join();
+    heap_sort.join();
+    merge_sort.join();
+    inplace_merge_sort.join();
+
     bubble_sort.join();
     selection_sort.join();
     insertion_sort.join();
-    merge_sort.join();
-    inplace_merge_sort.join();
-    quick_sort.join();
-    stl_sort.join();
-
-    ///*if (!check(v_for_bubble_sort.begin(), v_for_bubble_sort.end()) ||
-    //    !check(v_for_bubble_sort.begin(), v_for_bubble_sort.end()) ||
-    //    !check(v_for_bubble_sort.begin(), v_for_bubble_sort.end()) ||
-    //    !check(v_for_bubble_sort.begin(), v_for_bubble_sort.end()) ||
-    //    !check(v_for_bubble_sort.begin(), v_for_bubble_sort.end()))
-    //{
-    //    std::cout << "Sorting error!";
-    //}*/
+#endif
 
     return 0;
 }
