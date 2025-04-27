@@ -154,10 +154,10 @@ namespace my_stl
 			}(first, mid, last - 1);
 		std::swap(*mid, *first);
 		RanIt pivot = first;
-		RanIt i = first;
+		RanIt i = first; // all ele < pivot are between [first, i]
 		
 		for (RanIt work = first; work != last; ++work)
-		{
+		{ // work >= i
 			if (comp(*work, *pivot))
 			{
 				++i;
