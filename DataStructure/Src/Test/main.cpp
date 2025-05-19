@@ -31,18 +31,13 @@ using namespace std;
 
 using node = my_stl::AVLTree<int>::AVLTreeNode*;
 
-int f()
-{
-	if (1 != 2)
-		std::abort();
-}
 #include "Tool/Exception.h"
 int main()
 {
 	//my_stl::AVLTree<int> tree;
 	//std::cout << tree.count(62);
 	my_stl::LBiTree<int> tree({ 1,2,3,nullopt, 4,5 });
-	for (auto it = tree.lnr_begin(); it != tree.lnr_end(); ++it)
+	for (auto it = tree.lrn_crbegin(); it != tree.lrn_crend(); it++)
 	{
 		std::cout << *it << " ";
 	}

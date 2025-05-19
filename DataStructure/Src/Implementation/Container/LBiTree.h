@@ -5,6 +5,7 @@
 #include <stack>
 #include <iostream>
 #include <functional>
+#include "Implementation/Iterator/TreeIterator.h"
 #include "Tool/Compare.h"
 #include "Tool/Exception.h"
 
@@ -24,143 +25,20 @@ namespace my_stl
     class LBiTreeBase
     {
     public:
-        template<typename CoreType>
-        class BaseIterator
-        {
-        public:
-            auto& operator*() { return node->data; }
-            bool operator==(BaseIterator const& other) const { return node == other.node; }
-            bool operator!=(BaseIterator const& other) const { return node != other.node; }
-        protected:
-            BaseIterator(CoreType* node): node(node){}
-            CoreType* node;
-        };
-
-        template<class CoreType> 
-        class LNRIteratorBase : public BaseIterator<CoreType>
-        {
-        public:
-            using BaseIterator<CoreType>::BaseIterator;
-            using BaseIterator<CoreType>::node;
-            LNRIteratorBase(CoreType* node): BaseIterator<CoreType>(node){}
-            LNRIteratorBase& operator++()
-            {
-                if (node->rchild)
-                {
-                    node = node->rchild;
-                    while (node->lchild != nullptr)
-                    {
-                        node = node->lchild;
-                    }
-                }
-                else
-                {
-                    while (node->parent != nullptr && node != node->parent->lchild)
-                    {
-                        node = node->parent;
-                    } 
-                    node = node->parent;
-                }
-                return *this;
-            }
-            LNRIteratorBase operator++(int)
-            {
-                LNRIteratorBase tmp = *this;
-                ++(*this);
-                return tmp;
-            }
-            LNRIteratorBase& operator--()
-            {
-                if (node->lchild)
-                {
-                    node = node->lchild;
-                    while (node->rchild != nullptr)
-                    {
-                        node = node->rchild;
-                    }
-                }
-                else
-                {
-                    while (node->parent != nullptr && node != node->parent->rchild)
-                    {
-                        node = node->parent;
-                    }
-                    node = node->parent;
-                }
-                return *this;
-            }
-            LNRIteratorBase operator--(int)
-            {
-                LNRIteratorBase tmp = *this;
-                --(*this);
-                return tmp;
-            }
-        };
         using lnr_iterator = LNRIteratorBase<NodeType>;
         using lnr_const_iterator = LNRIteratorBase<const NodeType>;
-
-        template<class CoreType>
-        class LNRReverseIteratorBase : public BaseIterator<CoreType>
-        {
-        public:
-            using BaseIterator<CoreType>::BaseIterator;
-            using BaseIterator<CoreType>::node;
-            LNRReverseIteratorBase(CoreType* node) : BaseIterator<CoreType>(node) {}
-            LNRReverseIteratorBase& operator++()
-            {
-                if (node->lchild)
-                {
-                    node = node->lchild;
-                    while (this->node->rchild != nullptr)
-                    {
-                        node = node->rchild;
-                    }
-                }
-                else
-                {
-                    while (node->parent != nullptr && node != node->parent->rchild)
-                    {
-                        node = node->parent;
-                    }
-                    node = node->parent;
-                }
-                return *this;
-            }
-            LNRReverseIteratorBase operator++(int)
-            {
-                LNRReverseIteratorBase tmp = *this;
-                ++(*this);
-                return tmp;
-            }
-            LNRReverseIteratorBase& operator--()
-            {
-                if (node->rchild)
-                {
-                    node = node->rchild;
-                    while (node->lchild != nullptr)
-                    {
-                        node = node->lchild;
-                    }
-                }
-                else
-                {
-                    while (node->parent != nullptr && node != node->parent->lchild)
-                    {
-                        node = node->parent;
-                    }
-                    node = node->parent;
-                }
-                return *this;
-            }
-            LNRReverseIteratorBase operator--(int)
-            {
-                LNRReverseIteratorBase tmp = *this;
-                --(*this);
-                return tmp;
-            }
-        };
         using lnr_reverse_iterator = LNRReverseIteratorBase<NodeType>;
         using lnr_const_reverse_iterator = LNRReverseIteratorBase<const NodeType>;
+
+        using nlr_iterator = NLRIteratorBase<NodeType>;
+        using nlr_const_iterator = NLRIteratorBase<const NodeType>;
+        using nlr_reverse_iterator = NLRReverseIteratorBase<NodeType>;
+        using nlr_const_reverse_iterator = NLRReverseIteratorBase<const NodeType>;
+
+        using lrn_iterator = LRNIteratorBase<NodeType>;
+        using lrn_const_iterator = LRNIteratorBase<const NodeType>;
+        using lrn_reverse_iterator = LRNReverseIteratorBase<NodeType>;
+        using lrn_const_reverse_iterator = LRNReverseIteratorBase<const NodeType>;
     public:
         ~LBiTreeBase()
         {
@@ -368,7 +246,6 @@ namespace my_stl
         {
             return lnr_cend();
         }
-
         lnr_reverse_iterator lnr_rbegin()
         {
             if (root == nullptr)
@@ -410,6 +287,154 @@ namespace my_stl
         lnr_const_reverse_iterator lnr_rend() const
         {
             return lnr_crend();
+        }
+
+        nlr_iterator nlr_begin()
+        {
+            return nlr_iterator(root);
+        }
+        nlr_const_iterator nlr_cbegin() const
+        {
+            return nlr_const_iterator(root);
+        }
+        nlr_const_iterator nlr_begin() const
+        {
+            return nlr_cbegin();
+        }
+        nlr_iterator nlr_end()
+        {
+            return nlr_iterator(nullptr);
+        }
+        nlr_const_iterator nlr_cend() const
+        {
+            return nlr_const_iterator(nullptr);
+        }
+        nlr_const_iterator nlr_end() const
+        {
+            return nlr_cend();
+        }
+        nlr_reverse_iterator nlr_rbegin()
+        {
+            if (root == nullptr)
+                return nlr_reverse_iterator(nullptr);
+
+            // Find the last node in NLR traversal (rightmost leaf)
+            NodeType* node = root;
+            while (true) {
+                if (node->rchild)
+                    node = node->rchild;
+                else if (node->lchild)
+                    node = node->lchild;
+                else
+                    break;
+            }
+            return nlr_reverse_iterator(node);
+        }
+        nlr_const_reverse_iterator nlr_crbegin() const
+        {
+            if (root == nullptr)
+                return nlr_const_reverse_iterator(nullptr);
+
+            const NodeType* node = root;
+            while (true) {
+                if (node->rchild)
+                    node = node->rchild;
+                else if (node->lchild)
+                    node = node->lchild;
+                else
+                    break;
+            }
+            return nlr_const_reverse_iterator(node);
+        }
+        nlr_const_reverse_iterator nlr_rbegin() const
+        {
+            return nlr_crbegin();
+        }
+        nlr_reverse_iterator nlr_rend()
+        {
+            return nlr_reverse_iterator(nullptr);
+        }
+        nlr_const_reverse_iterator nlr_crend() const
+        {
+            return nlr_const_reverse_iterator(nullptr);
+        }
+        nlr_const_reverse_iterator nlr_rend() const
+        {
+            return nlr_crend();
+        }
+
+        lrn_iterator lrn_begin()
+        {
+            if (root == nullptr)
+                return lrn_iterator(nullptr);
+
+            // Find the first node in LRN traversal (leftmost leaf)
+            NodeType* node = root;
+            while (true) {
+                if (node->lchild)
+                    node = node->lchild;
+                else if (node->rchild)
+                    node = node->rchild;
+                else
+                    break;
+            }
+            return lrn_iterator(node);
+        }
+        lrn_const_iterator lrn_cbegin() const
+        {
+            if (root == nullptr)
+                return lrn_const_iterator(nullptr);
+
+            const NodeType* node = root;
+            while (true) {
+                if (node->lchild)
+                    node = node->lchild;
+                else if (node->rchild)
+                    node = node->rchild;
+                else
+                    break;
+            }
+            return lrn_const_iterator(node);
+        }
+        lrn_const_iterator lrn_begin() const
+        {
+            return lrn_cbegin();
+        }
+        lrn_iterator lrn_end()
+        {
+            return lrn_iterator(nullptr);
+        }
+        lrn_const_iterator lrn_cend() const
+        {
+            return lrn_const_iterator(nullptr);
+        }
+        lrn_const_iterator lrn_end() const
+        {
+            return lrn_cend();
+        }
+        lrn_reverse_iterator lrn_rbegin()
+        {
+            return lrn_reverse_iterator(root);
+        }
+        lrn_const_reverse_iterator lrn_crbegin() const
+        {
+            return lrn_const_reverse_iterator(root);
+        }
+        lrn_const_reverse_iterator lrn_rbegin() const
+        {
+            return lrn_crbegin();
+        }
+        lrn_reverse_iterator lrn_rend()
+        {
+            return lrn_reverse_iterator(nullptr);
+        }
+        lrn_const_reverse_iterator lrn_crend() const
+        {
+            return lrn_const_reverse_iterator(nullptr);
+        }
+        lrn_const_reverse_iterator lrn_rend() const
+        {
+            return lrn_crend();
         }
 
         NodeType* data() const { return root; }

@@ -12,6 +12,8 @@ namespace my_stl
     {
     public:
         using LBiTree<NodeType>::root;
+        using LBiTree<NodeType>::lnr_iterator;
+        using LBiTree<NodeType>::lnr_const_iterator;
         using CallBackFunc = std::function<void(NodeType*)>;
         BSTreeBase(CompPred comp)
             :LBiTree<NodeType>(), comp(comp)
@@ -26,6 +28,16 @@ namespace my_stl
         void erase(T val)
         {
             erase_impl(val, root);
+        }
+        template<typename T>
+        lnr_iterator find(T val)
+        {
+            return lnr_iterator(find_impl(val));
+        }
+        template<typename T>
+        lnr_const_iterator find(T val) const
+        {
+            return lnr_const_iterator(find_impl(val));
         }
     protected:
         CompPred comp;
@@ -96,6 +108,21 @@ namespace my_stl
                 }
                 delete next;
             }
+        }
+        template<typename T>
+        NodeType* find_impl(T val)
+        {
+            NodeType* cur = root;
+            while (cur != nullptr)
+            {
+                if (comp(val, cur->data))
+                    cur = cur->left;
+                else if (comp(cur->data, val))
+                    cur = cur->right;
+                else
+                    return cur;
+            }
+            return nullptr;
         }
     };
 }
