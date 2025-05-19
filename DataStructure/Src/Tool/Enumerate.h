@@ -5,7 +5,7 @@
 namespace my_stl
 {
 	template<typename Container>
-	class Enumeric_t
+	class Enumerate_t
 	{
 	public:
 		struct Iterator
@@ -17,7 +17,7 @@ namespace my_stl
 			bool operator==(Iterator const& other) const { return index == other.index && it == other.it; }
 			bool operator!=(Iterator const& other) const { return !(*this == other); }
 		};
-		Enumeric_t(Container&& c)
+		Enumerate_t(Container&& c)
 			:container(std::forward<Container>(c))
 		{}
 		Iterator begin() { return { 0, c.begin() }; }
@@ -27,5 +27,5 @@ namespace my_stl
 	};
 
 	template<typename Container>
-	Enumeric_t<Container> enumeric(Container&& c) { return Enumeric_t(std::forward<Container>(c)); }
+	Enumerate_t<Container> enumeric(Container&& c) { return Enumeric_t(std::forward<Container>(c)); }
 }
