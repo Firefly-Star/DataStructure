@@ -44,6 +44,14 @@ namespace my_stl
     {
     public:
         using ForwardIterator::ForwardIterator;
+        ReverseIterator(ForwardIterator it)
+            :ForwardIterator(--it){ }
+        ForwardIterator base() const
+        {
+            ReverseIterator tmp = *this;
+            --tmp;
+            return static_cast<ForwardIterator>(tmp);
+        }
         ReverseIterator& operator++()
         {
             ForwardIterator::operator--();
@@ -67,6 +75,9 @@ namespace my_stl
             return old;
         }
     };
+
+    template<class ForwardIterator>
+    using reverse_iterator = ReverseIterator<ForwardIterator>;
 
     // Implementation
     

@@ -5,6 +5,7 @@
 #include <stack>
 #include <iostream>
 #include <functional>
+#include <type_traits>
 #include "Implementation/Iterator/TreeIterator.h"
 #include "Tool/Compare.h"
 #include "Tool/Exception.h"
@@ -18,7 +19,7 @@ namespace my_stl
         BaseTreeNode* parent = nullptr;
         BaseTreeNode* lchild = nullptr;
         BaseTreeNode* rchild = nullptr;
-        BaseTreeNode(T data) :data(data), lchild(nullptr), rchild(nullptr){}
+        BaseTreeNode(T data = T()) :data(data), lchild(nullptr), rchild(nullptr){}
     };
 
     template<typename NodeType>
@@ -552,4 +553,54 @@ namespace my_stl
             }
         }
     };
+
+    struct LNRTraversalTag {};
+    struct NLRTraversalTag {};
+    struct LRNTraversalTag {};
+
+    inline constexpr LNRTraversalTag lnr;
+    inline constexpr NLRTraversalTag nlr;
+    inline constexpr LRNTraversalTag lrn;
+
+    template<class Tree, class TraversalTag>
+    class TreeView
+    {
+        static_assert(false, "Unsupported traversal tag.");
+    };
+    template<class Tree>
+    class TreeView<Tree, LNRTraversalTag>
+    {
+    public:
+        TreeView(Tree& tree):tree(tree){}
+        auto begin() const { return tree.lnr_begin(); }
+        auto end() const { return tree.lnr_end(); }
+    private:
+        const Tree&& tree;
+    };
+    template<class Tree>
+    class TreeView<Tree, NLRTraversalTag>
+    {
+    public:
+        TreeView(Tree& tree) :tree(tree) {}
+        auto begin() const { return tree.nlr_begin(); }
+        auto end() const { return tree.nlr_end(); }
+    private:
+        const Tree&& tree;
+    };
+    template<class Tree>
+    class TreeView<Tree, LRNTraversalTag>
+    {
+    public:
+        TreeView(Tree& tree) :tree(tree) {}
+        auto begin() const { return tree.lrn_begin(); }
+        auto end() const { return tree.lrn_end(); }
+    private:
+        const Tree&& tree;
+    };
+
+    template<class Tree, class TraversalTag>
+    TreeView<Tree, TraversalTag> operator| (Tree&& tree, TraversalTag)
+    {
+        return TreeView<Tree, TraversalTag>(std::forward<Tree>(tree));
+    }
 }

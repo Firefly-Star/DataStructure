@@ -27,18 +27,62 @@
 //#include "Tool/Memorizer.h"
 #include "Implementation/Container/AVLTree.h"
 #include "Implementation/Container/LBiTree.h"
+#include "Implementation/Container/BSTree.h"
+#include "Implementation/Container/RBTree.h"
 using namespace std;
 
-using node = my_stl::AVLTree<int>::AVLTreeNode*;
-
 #include "Tool/Exception.h"
+
+class X
+{
+protected:
+	void f() { std::cout << "x\n"; }
+};
+
+class Y : public X
+{
+public:
+	void y() { X::f(); }
+};
+
+template<typename T>
+class A
+{
+	static_assert(false, "unsupported param.");
+};
+
+template<>
+class A<int>
+{
+
+};
+template<>
+class A<double>
+{
+
+};
+
+
 int main()
 {
-	//my_stl::AVLTree<int> tree;
-	//std::cout << tree.count(62);
-	my_stl::LBiTree<int> tree({ 1,2,3,nullopt, 4,5 });
-	for (auto it = tree.lrn_crbegin(); it != tree.lrn_crend(); it++)
+	my_stl::RBTree<int> tree;
+	for (int i = 0; i < 10; ++i)
 	{
-		std::cout << *it << " ";
+		tree.insert(i);
 	}
+	for (auto i : tree)
+	{
+		std::cout << i << " ";
+	}
+	std::cout << "\n";
+	for (auto i : tree | my_stl::lrn)
+	{
+		std::cout << i << " ";
+	}
+	std::cout << "\n";
+	for (auto i : tree | my_stl::nlr)
+	{
+		std::cout << i << " ";
+	}
+	std::cout << "\n";
 }
